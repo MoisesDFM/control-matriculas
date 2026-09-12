@@ -15,10 +15,26 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
+/**
+ * SSL obligatorio contra cualquier host remoto; se omite solo para un
+ * PostgreSQL en la propia maquina (desarrollo), que no suele tener TLS.
+ * Misma regla que src/lib/db.ts.
+ */
+function sslPara(url) {
+  try {
+    const { hostname, searchParams } = new URL(url);
+    const local = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    if (local && searchParams.get('sslmode') !== 'require') return false;
+  } catch {
+    // host no interpretable: se asume remoto.
+  }
+  return { rejectUnauthorized: true };
+}
+
 const dir = path.resolve('db');
 const archivos = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
 
-const client = new pg.Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: true } });
+const client = new pg.Client({ connectionString: DATABASE_URL, ssl: sslPara(DATABASE_URL) });
 await client.connect();
 
 await client.query(`

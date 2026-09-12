@@ -11,6 +11,22 @@ declare global {
   var __pgPool: Pool | undefined;
 }
 
+/**
+ * SSL obligatorio y con verificacion de certificado contra cualquier host
+ * remoto. Solo se desactiva para PostgreSQL en la propia maquina (desarrollo),
+ * donde no hay red que interceptar y el servidor local no suele tener TLS.
+ */
+export function sslPara(url: string): { rejectUnauthorized: boolean } | false {
+  try {
+    const { hostname, searchParams } = new URL(url);
+    const local = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    if (local && searchParams.get('sslmode') !== 'require') return false;
+  } catch {
+    // Si no se puede interpretar, se asume remoto y se exige SSL.
+  }
+  return { rejectUnauthorized: true };
+}
+
 export const pool =
   globalThis.__pgPool ??
   new Pool({
@@ -19,7 +35,7 @@ export const pool =
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 8_000,
     statement_timeout: 15_000,
-    ssl: { rejectUnauthorized: true },
+    ssl: sslPara(env.DATABASE_URL),
   });
 
 if (!isProd) globalThis.__pgPool = pool;
