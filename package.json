@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "setup:local": "node scripts/setup-local.mjs",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "user:create": "node --env-file=.env.local scripts/create-user.mjs"
   },
