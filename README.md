@@ -44,7 +44,8 @@ nechimotos-matriculas-web/
     │   │   ├── registros/page.tsx
     │   │   ├── registros/nuevo/page.tsx  # formulario A..P con mapeo automático
     │   │   ├── runt/page.tsx             # solicitudes e inscripción RUNT
-    │   │   └── reportes/page.tsx         # KPIs, SLA, sincronización, .xlsx
+    │   │   ├── reportes/page.tsx         # KPIs, SLA, sincronización, .xlsx
+    │   │   └── admin/page.tsx            # SOLO ADMIN: usuarios y mapeo
     │   └── api/
     │       ├── auth/{login,logout,me}/route.ts
     │       ├── catalogos/route.ts
@@ -56,6 +57,13 @@ nechimotos-matriculas-web/
     │       ├── sync/sheets/route.ts                  # POST manual · GET cron
     │       ├── reportes/kpis/route.ts
     │       ├── reportes/xlsx/route.ts
+    │       ├── admin/usuarios/route.ts               # GET · POST (SOLO ADMIN)
+    │       ├── admin/usuarios/[id]/route.ts          # PATCH · DELETE (desactiva)
+    │       ├── admin/tramitadores/route.ts           # GET · POST
+    │       ├── admin/tramitadores/[id]/route.ts      # PATCH
+    │       ├── admin/puntos-venta/route.ts           # GET · POST
+    │       ├── admin/puntos-venta/[id]/route.ts      # PATCH (reasignar tramitador)
+    │       ├── admin/transitos/route.ts              # GET · POST
     │       └── health/route.ts
     ├── lib/
     │   ├── env.ts                 # valida la configuración al arrancar
@@ -77,6 +85,8 @@ nechimotos-matriculas-web/
     │   │   ├── estados.ts         # máquina de estados + puedeTransicionar()
     │   │   ├── mapeo.ts           # mapeo canónico Ciudad → Tránsito/Tramitador
     │   │   ├── schemas.ts         # Zod de columnas A..P, filtros y RUNT
+    │   │   ├── admin.schemas.ts   # Zod de usuarios, tramitadores y sedes
+    │   │   ├── admin.repo.ts      # invariantes del panel de administración
     │   │   └── registros.repo.ts  # consultas con alcance RBAC inyectado
     │   ├── integrations/
     │   │   ├── google-sheets.ts   # Service Account, orden A..P inmutable
@@ -90,6 +100,7 @@ nechimotos-matriculas-web/
         ├── layout/Navegacion.tsx
         ├── dashboard/{TarjetasKpi,AlertaRunt,Tablero}.tsx
         ├── forms/{FormularioLogin,FormularioRegistro,PanelRunt}.tsx
+        ├── admin/{PanelAdmin,PanelUsuarios,PanelMapeo}.tsx
         └── reportes/PanelReportes.tsx
 ```
 
@@ -130,7 +141,42 @@ npm run user:create -- --email nechi@nechimotos.com --nombre "Asesor Nechí" --r
 
 ---
 
-## 4. Modelo de seguridad
+## 4. Panel de administración (`/admin`, solo ADMIN)
+
+Triple puerta: el middleware de borde bloquea `/admin` y `/api/admin`, la página vuelve a
+comprobar la sesión en el servidor, y cada route handler declara `rol: 'ADMIN'`.
+
+**Usuarios y accesos**
+
+- Alta de cuentas con política de contraseña (≥10 caracteres, mayúscula, minúscula y número);
+  no existe autoregistro.
+- Cambio de rol y de sede, restablecimiento de contraseña, desbloqueo tras intentos fallidos,
+  desactivación y reactivación. `DELETE` no borra: desactiva y conserva la autoría.
+- Cambiar rol, sede, contraseña o desactivar **revoca las sesiones abiertas** del usuario: el
+  rol y el punto de venta viajan firmados en el JWT, así que un token previo seguiría
+  concediendo el alcance anterior.
+- Invariantes que ni el administrador puede romper: nadie se desactiva ni se quita el rol a sí
+  mismo, siempre queda al menos un ADMIN activo, y un ASESOR nunca queda sin sede.
+- Nunca se devuelve `password_hash`; la contraseña jamás entra en la auditoría.
+
+**Tramitadores y mapeo**
+
+- Reasignación de tramitador por ciudad de correspondencia — la regla 4.1 es dato, no código.
+  El tránsito se hereda del tramitador, por lo que el trigger `trg_pdv_valida_tramitador`
+  nunca puede quedar en contradicción.
+- Las carpetas ya matriculadas o entregadas conservan su tramitador histórico. Las abiertas se
+  re-mapean solo si se marca la casilla: al tocar la fila, `fn_registro_normaliza` vuelve a
+  derivar el mapeo (esto incrementa `row_version`, así que un formulario abierto en otra
+  pestaña pedirá recargar).
+- Alta y baja de tramitadores, tránsitos y puntos de venta; conmutador de preasignación de
+  placa por sede.
+- Bajas protegidas: no se desactiva un tramitador con sedes activas asignadas, ni una sede con
+  asesores activos.
+- Panel con los últimos movimientos de administración y los accesos fallidos.
+
+---
+
+## 5. Modelo de seguridad
 
 | Control | Implementación |
 |---|---|
@@ -152,7 +198,7 @@ npm run user:create -- --email nechi@nechimotos.com --nombre "Asesor Nechí" --r
 
 ---
 
-## 5. Reglas de negocio implementadas
+## 6. Reglas de negocio implementadas
 
 **Mapeo automático** (tabla `puntos_venta`, aplicado por el trigger `fn_registro_normaliza`;
 editable desde datos sin desplegar):
@@ -179,7 +225,7 @@ archivo `.xlsx` (escritas como texto para que ningún Excel regional las reinter
 
 ---
 
-## 6. Correspondencia con el Excel
+## 7. Correspondencia con el Excel
 
 | Col. | Encabezado | Campo |
 |---|---|---|
@@ -202,7 +248,7 @@ archivo `.xlsx` (escritas como texto para que ningún Excel regional las reinter
 
 ---
 
-## 7. Comandos
+## 8. Comandos
 
 ```bash
 npm run dev          # desarrollo

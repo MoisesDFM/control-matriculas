@@ -187,6 +187,9 @@ function traducirError(e: unknown): NextResponse {
       ux_registros_placa: 'Esa placa ya esta asignada a otro registro vigente.',
       ux_usuarios_email: 'Ese correo ya esta registrado.',
       ux_sol_activa: 'Ya hay una solicitud de RUNT pendiente para esa cedula.',
+      transitos_nombre_uk: 'Ya existe un transito con ese nombre.',
+      tramitadores_nombre_uk: 'Ya existe un tramitador con ese nombre.',
+      pdv_ciudad_uk: 'Ya existe un punto de venta con esa ciudad de correspondencia.',
     };
     return fallo('CONFLICTO', mapa[pg.constraint ?? ''] ?? 'Registro duplicado.');
   }

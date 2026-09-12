@@ -20,6 +20,7 @@ const ENLACES = [
   { href: '/registros/nuevo', texto: 'Registrar venta', soloAdmin: false },
   { href: '/runt', texto: 'Inscripciones RUNT', soloAdmin: false },
   { href: '/reportes', texto: 'Reportes y KPIs', soloAdmin: false },
+  { href: '/admin', texto: 'Administracion', soloAdmin: true },
 ];
 
 export default function Navegacion({ perfil, pendientesRunt }: { perfil: Perfil; pendientesRunt: number }) {
