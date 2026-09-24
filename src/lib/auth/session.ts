@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
-import { env, isProd } from '../env';
+import { env } from '../env';
 import { query, queryOne } from '../db';
 import { signAccessToken, verifyAccessToken, type AccessClaims } from './jwt';
 
@@ -12,10 +12,17 @@ export const CSRF_COOKIE = '__Host-nm_csrf';
  * Cookies HTTP-Only + SameSite=Strict + Secure + prefijo __Host-
  * El prefijo __Host- obliga a Secure, Path=/ y prohibe el atributo Domain:
  * ningun subdominio comprometido puede sobrescribirlas.
+ *
+ * `secure` va SIEMPRE en true, incluso en desarrollo: sin el atributo Secure el
+ * navegador descarta en silencio cualquier cookie con prefijo __Host-, y la
+ * sesion nunca llegaria a guardarse. Los navegadores tratan http://localhost
+ * como origen confiable, asi que admiten cookies Secure ahi. La consecuencia
+ * practica es que el servidor de desarrollo debe abrirse en localhost (no en
+ * una IP de la red local por http) o en https.
  */
 const baseCookie = {
   httpOnly: true,
-  secure: isProd,
+  secure: true,
   sameSite: 'strict' as const,
   path: '/',
 };

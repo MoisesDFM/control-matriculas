@@ -2,12 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "start",
+      "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "start"
-      ],
+      "runtimeArgs": ["run", "dev"],
       "port": 3000
     }
   ]

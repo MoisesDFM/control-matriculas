@@ -23,10 +23,31 @@ import { randomBytes } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import pg from 'pg';
 
+// npm puede despojar las comillas: un valor con espacios llega como varios
+// argumentos sueltos, asi que se acumulan hasta el siguiente "--".
 const args = {};
-for (let i = 2; i < process.argv.length; i += 2) {
-  const clave = process.argv[i];
-  if (clave?.startsWith('--')) args[clave.slice(2)] = process.argv[i + 1] ?? '';
+{
+  let actual = null;
+  for (const token of process.argv.slice(2)) {
+    if (token.startsWith('--')) {
+      actual = token.slice(2);
+      args[actual] = '';
+    } else if (actual) {
+      args[actual] = args[actual] ? `${args[actual]} ${token}` : token;
+    }
+  }
+}
+
+/** Ver urlSinSslmode() en src/lib/db.ts: pg eleva sslmode a verify-full. */
+function urlSinSslmode(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete('sslmode');
+    u.searchParams.delete('uselibpqcompat');
+    return u.toString();
+  } catch {
+    return url;
+  }
 }
 
 const email = (args.email ?? '').trim().toLowerCase();
@@ -84,7 +105,7 @@ if (args.url) {
 
   // Con PostgreSQL local hay que crear la base; en Supabase/Neon ya existe.
   process.stdout.write(`1/4  Base de datos "${db}" ... `);
-  const admin = new pg.Client({ connectionString: `${base}/postgres`, ssl: remoto ? { rejectUnauthorized: false } : false });
+  const admin = new pg.Client({ connectionString: urlSinSslmode(`${base}/postgres`), ssl: remoto ? { rejectUnauthorized: false } : false });
   try {
     await admin.connect();
   } catch (e) {
@@ -110,7 +131,7 @@ if (args.url) {
 // ---------------------------------------------------------------------------
 process.stdout.write(`${args.url ? '1/4  Conexion' : '1b   Verificacion'} ... `);
 const prueba = new pg.Client({
-  connectionString: urlDb,
+  connectionString: urlSinSslmode(urlDb),
   ssl: remoto ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: 15_000,
 });

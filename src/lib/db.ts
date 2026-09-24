@@ -60,10 +60,26 @@ function caDeEntorno(): string | undefined {
   }
 }
 
+/**
+ * `pg` interpreta por su cuenta el `sslmode` de la cadena y, en su version
+ * actual, lo eleva a verify-full, ignorando la opcion `ssl` explicita. Por eso
+ * la cadena se entrega SIN ese parametro y la politica TLS se pasa aparte.
+ */
+export function urlSinSslmode(url: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete('sslmode');
+    u.searchParams.delete('uselibpqcompat');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 export const pool =
   globalThis.__pgPool ??
   new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString: urlSinSslmode(env.DATABASE_URL),
     max: 5,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 8_000,

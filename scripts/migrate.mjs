@@ -45,7 +45,19 @@ function sslPara(url) {
 const dir = path.resolve('db');
 const archivos = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
 
-const client = new pg.Client({ connectionString: DATABASE_URL, ssl: sslPara(DATABASE_URL) });
+/** Ver urlSinSslmode() en src/lib/db.ts: pg eleva sslmode a verify-full. */
+function urlSinSslmode(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete('sslmode');
+    u.searchParams.delete('uselibpqcompat');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+const client = new pg.Client({ connectionString: urlSinSslmode(DATABASE_URL), ssl: sslPara(DATABASE_URL) });
 await client.connect();
 
 await client.query(`
