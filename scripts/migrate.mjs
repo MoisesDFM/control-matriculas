@@ -16,18 +16,29 @@ if (!DATABASE_URL) {
 }
 
 /**
- * SSL obligatorio contra cualquier host remoto; se omite solo para un
- * PostgreSQL en la propia maquina (desarrollo), que no suele tener TLS.
- * Misma regla que src/lib/db.ts.
+ * Misma politica TLS que src/lib/db.ts (semantica de `sslmode` de libpq):
+ * local sin TLS, DATABASE_CA_CERT para verificacion estricta, `sslmode=require`
+ * cifra sin verificar el emisor (lo que aceptan Supabase y Neon), y cualquier
+ * otro host remoto exige verificacion.
  */
 function sslPara(url) {
+  let hostname = '';
+  let sslmode = null;
   try {
-    const { hostname, searchParams } = new URL(url);
-    const local = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-    if (local && searchParams.get('sslmode') !== 'require') return false;
+    const u = new URL(url);
+    hostname = u.hostname;
+    sslmode = u.searchParams.get('sslmode');
   } catch {
-    // host no interpretable: se asume remoto.
+    // URL no interpretable: se asume remoto.
   }
+  if (['localhost', '127.0.0.1', '::1'].includes(hostname) && sslmode !== 'require') return false;
+
+  const ca = process.env.DATABASE_CA_CERT?.trim();
+  if (ca) {
+    const pem = ca.startsWith('-----BEGIN') ? ca.split('\\n').join('\n') : readFileSync(ca, 'utf8');
+    return { ca: pem, rejectUnauthorized: true };
+  }
+  if (sslmode === 'require' || sslmode === 'prefer') return { rejectUnauthorized: false };
   return { rejectUnauthorized: true };
 }
 
