@@ -4,7 +4,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'NECHIMOTOS · Gestion de Matriculas',
   description: 'Plataforma interna de tramites de matricula, SOAT y RUNT.',
-  robots: { index: false, follow: false, nocache: true },
+  // Se propaga a todas las rutas como:
+  // <meta name="robots" content="noindex, nofollow, noarchive, nocache">
+  robots: { index: false, follow: false, noarchive: true, nocache: true },
   applicationName: 'NECHIMOTOS',
 };
 

@@ -5,6 +5,8 @@ import clsx from 'clsx';
 import { api, FalloApi } from '@/lib/client/api';
 import { Alerta, Campo, Cargando, Insignia, Tarjeta, Vacio } from '@/components/ui/primitivos';
 import type { UsuarioFila } from '@/lib/domain/admin.repo';
+import EditorAlcance from './usuarios/EditorAlcance';
+import { manejar } from './usuarios/errores';
 
 interface Props {
   puntosVenta: { id: number; ciudad_correspondencia: string }[];
@@ -302,79 +304,4 @@ export default function PanelUsuarios({ puntosVenta, usuarioActualId }: Props) {
       </Alerta>
     </div>
   );
-}
-
-// ------------------------------------------------------------- sub-editor
-function EditorAlcance({
-  usuario,
-  puntosVenta,
-  onGuardar,
-  onCancelar,
-}: {
-  usuario: UsuarioFila;
-  puntosVenta: { id: number; ciudad_correspondencia: string }[];
-  onGuardar: (cambios: Record<string, unknown>) => void;
-  onCancelar: () => void;
-}) {
-  const [rol, setRol] = useState(usuario.rol);
-  const [pdv, setPdv] = useState<number | ''>(usuario.punto_venta_id ?? '');
-
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      <select
-        className="campo w-auto py-1 text-xs"
-        value={rol}
-        onChange={(e) => {
-          const r = e.target.value as 'ASESOR' | 'ADMIN';
-          setRol(r);
-          if (r === 'ADMIN') setPdv('');
-        }}
-      >
-        <option value="ASESOR">ASESOR</option>
-        <option value="ADMIN">ADMIN</option>
-      </select>
-
-      <select
-        className="campo w-auto py-1 text-xs"
-        value={pdv}
-        onChange={(e) => setPdv(e.target.value ? Number(e.target.value) : '')}
-        disabled={rol === 'ADMIN'}
-      >
-        <option value="">{rol === 'ADMIN' ? 'global' : 'Seleccione…'}</option>
-        {puntosVenta.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.ciudad_correspondencia}
-          </option>
-        ))}
-      </select>
-
-      <button
-        className="btn-primario px-2 py-1 text-xs"
-        disabled={rol === 'ASESOR' && pdv === ''}
-        onClick={() => onGuardar({ rol, puntoVentaId: rol === 'ADMIN' ? null : pdv })}
-      >
-        Guardar
-      </button>
-      <button className="btn-secundario px-2 py-1 text-xs" onClick={onCancelar}>
-        Cancelar
-      </button>
-    </div>
-  );
-}
-
-function manejar(
-  err: unknown,
-  setErrores: (e: Record<string, string>) => void,
-  setAviso: (a: { tono: 'error' | 'exito'; texto: string }) => void,
-): void {
-  if (err instanceof FalloApi) {
-    if (err.error.campos?.length) {
-      setErrores(Object.fromEntries(err.error.campos.map((c) => [c.campo, c.mensaje])));
-      setAviso({ tono: 'error', texto: 'Revise los campos marcados.' });
-    } else {
-      setAviso({ tono: 'error', texto: err.error.mensaje });
-    }
-  } else {
-    setAviso({ tono: 'error', texto: 'No se pudo completar la operacion.' });
-  }
 }

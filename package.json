@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "setup:local": "node scripts/setup-local.mjs",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
     "user:create": "node --env-file=.env.local scripts/create-user.mjs"
   },
   "dependencies": {
